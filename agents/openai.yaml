@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git Conflicts"
+  short_description: "Resolve rebase, merge, and restack conflicts"
+  default_prompt: "Use $git-conflicts to inspect the paused Git operation, resolve the unmerged files, and continue safely."
