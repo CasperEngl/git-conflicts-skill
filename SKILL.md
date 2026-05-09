@@ -51,19 +51,35 @@ Default policy:
 ## Workflow
 
 1. Detect the paused operation and the correct continue command.
-2. List unmerged paths with `git status --short` and `git diff --name-only --diff-filter=U`.
-3. Inspect each conflicted path before editing.
-4. Classify the conflict:
+2. Identify the child branch and its parent, then find the merge base (the commit where the child diverged).
+3. Summarize the intent of both sides before touching any conflicts. This frames every subsequent resolution decision.
+   - **Child intent**: read `git log --oneline <merge-base>..<child-tip>` and `git log -p <merge-base>..<child-tip>` (or `git diff <merge-base>..<child-tip>` when commits are noisy). Produce a short prose summary of *why* the child branch exists — the feature, fix, or refactor it is trying to land.
+   - **Parent intent since divergence**: read `git log --oneline <merge-base>..<parent-tip>` and inspect each commit (`git show <sha>` or `git log -p`) to summarize *why* the parent moved — what features, refactors, renames, or deletions landed on the parent after the child branched off. Call out structural changes (renames, moves, extractions, deletions) explicitly because they drive the resolution policy.
+   - Record both summaries before editing files. Use them to detect when a conflict is really an intent collision rather than a textual one.
+   - **In plan mode**: surface both summaries to the user as part of the plan so they can confirm the framing before any resolution happens.
+   - **In build mode**: keep the summaries internal and use them as guidelines while resolving conflicts. Do not pause to present them; only mention them in the final report when they explain a non-obvious resolution.
+4. List unmerged paths with `git status --short` and `git diff --name-only --diff-filter=U`.
+5. Inspect each conflicted path before editing, cross-referencing the two intent summaries to see whether the child's purpose still holds under the parent's new structure.
+6. Classify the conflict:
    - plain line edit
    - delete/modify
    - rename or move plus modify
    - moved function or class
    - generated artifact
-5. Resolve according to the structural policy.
-6. Record any dropped or overridden child behavior for the user-facing summary.
-7. Stage only resolved paths.
-8. Run the smallest useful verification.
-9. Continue the paused operation, preferring `gt continue` whenever Graphite is available.
+7. Resolve according to the structural policy.
+8. Record any dropped or overridden child behavior for the user-facing summary.
+9. Stage only resolved paths.
+10. Run the smallest useful verification.
+11. Continue the paused operation, preferring `gt continue` whenever Graphite is available.
+
+When reporting back to the user in **plan mode**, include both intent summaries (child since divergence, parent since divergence) alongside the planned resolution approach. In **build mode**, the summaries are working notes — only reference them in the final report when they explain why a conflict was resolved a particular way (especially when child behavior was dropped or relocated).
+
+### Picking the right refs
+
+- For a Graphite stack, the parent is `gt parent` (or visible in `gt log short`); the child tip is `HEAD` (or the branch being restacked).
+- For a plain rebase, the parent tip is the upstream (`@{upstream}` or the branch passed to `git rebase`); the child tip is the original branch HEAD before the rebase started (`ORIG_HEAD`).
+- For a merge, both sides are explicit: `MERGE_HEAD` is the incoming side, `HEAD` is the current side.
+- The merge base is `git merge-base <parent> <child>`.
 
 ## Whole-File Shortcuts
 
